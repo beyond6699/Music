@@ -4,7 +4,11 @@
   --mode: #4f7f68;
   --seal: #b23a2e;
   --serif: "Songti SC", "STSong", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+  --ov: rgba(242, 238, 229, .7);
 }
+body[data-season="summer"] { --ink: #1e2422; --paper: #efefe5; --ov: rgba(239, 239, 229, .7); }
+body[data-season="autumn"] { --ink: #2c221a; --paper: #f1e9d8; --ov: rgba(241, 233, 216, .7); }
+body[data-season="winter"] { --ink: #22242a; --paper: #edefef; --ov: rgba(237, 239, 239, .7); }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -59,7 +63,7 @@ button {
 /* 段落与诗句（竖排） */
 #section {
   position: fixed;
-  top: 150px;
+  top: 176px;
   right: 46px;
   writing-mode: vertical-rl;
   display: flex;
@@ -154,12 +158,46 @@ button {
 
 .lv { display: inline-flex; gap: 2px; margin-left: 3px; vertical-align: super; }
 .lv i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .2; transition: opacity .3s; }
-#btn-rain[data-level="1"] .lv i:nth-child(1),
-#btn-rain[data-level="2"] .lv i { opacity: .9; }
+#btn-wx[data-level="1"] .lv i:nth-child(1),
+#btn-wx[data-level="2"] .lv i { opacity: .9; }
+
+/* 季节（竖排，题下） */
+#seasons {
+  position: fixed;
+  top: 34px;
+  right: 104px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#seasons button {
+  position: relative;
+  padding: 5px 8px;
+  font-size: 14px;
+  opacity: .38;
+  transition: opacity .4s, color .6s;
+}
+#seasons button:hover { opacity: .85; }
+#seasons button.on { opacity: 1; color: var(--mode); }
+#seasons button::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 50%;
+  background: var(--mode);
+  transform: scale(0);
+  transition: transform .4s;
+}
+#seasons button.on::before { transform: scale(1); }
 
 /* 未开始时隐藏界面 */
-#bar, #hint, #section, #mode-desc { opacity: 0; transition: opacity 1.6s ease .6s; }
-body.playing #bar { opacity: 1; }
+#bar, #hint, #section, #mode-desc, #seasons { opacity: 0; transition: opacity 1.6s ease .6s; pointer-events: none; }
+body.playing #seasons { opacity: 1; pointer-events: auto; }
+body.playing #bar { opacity: 1; pointer-events: auto; }
 body.playing #hint { opacity: .5; }
 body.playing #section { opacity: 1; transition: opacity .7s ease; }
 body.playing #section.fade { opacity: 0; }
@@ -173,43 +211,50 @@ body.playing #mode-desc { opacity: .5; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(242, 238, 229, .9);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  transition: opacity 1.6s ease;
+  background: var(--ov);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  transition: opacity 1.6s ease, background 1.2s;
 }
 #overlay.hidden { opacity: 0; pointer-events: none; }
 .ov-inner { text-align: center; }
-.ov-inner h1 { font-size: clamp(90px, 18vmin, 180px); font-weight: 300; line-height: 1; }
+.ov-inner h1 { font-size: clamp(80px, 16vmin, 160px); font-weight: 300; line-height: 1; padding-left: .12em; letter-spacing: .12em; }
 .ov-inner .sub { margin-top: 22px; padding-left: .8em; font-size: 14px; letter-spacing: .8em; opacity: .7; }
-.ov-inner .desc { margin-top: 26px; font-size: 13px; line-height: 2.2; letter-spacing: .3em; opacity: .5; }
-#enter {
+.ov-inner .desc { margin-top: 24px; font-size: 13px; line-height: 2.2; letter-spacing: .3em; opacity: .5; }
+
+#picks { display: flex; justify-content: center; gap: 26px; margin-top: 40px; }
+#picks button {
   position: relative;
-  display: block;
-  margin: 44px auto 0;
-  width: 66px;
-  height: 66px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
-  border: 1px solid var(--ink);
+  border: 1px solid rgba(0, 0, 0, .22);
   font-size: 18px;
-  transition: background .5s, color .5s;
+  transition: background .5s, color .5s, border-color .5s;
 }
-#enter::before {
+#picks button::before {
   content: "";
   position: absolute;
-  inset: -10px;
+  inset: -9px;
   border-radius: 50%;
-  border: 1px solid rgba(38, 34, 30, .2);
-  transition: inset .6s, opacity .6s;
+  border: 1px solid var(--mode);
+  opacity: 0;
+  transform: scale(.85);
+  transition: opacity .6s, transform .6s;
 }
-#enter:hover { background: var(--ink); color: var(--paper); }
-#enter:hover::before { inset: -20px; opacity: 0; }
-.ov-inner .tip { margin-top: 36px; font-size: 11px; letter-spacing: .4em; opacity: .42; }
+#picks button.on { border-color: var(--ink); }
+#picks button.on::before { opacity: .45; transform: scale(1); }
+#picks button:hover { background: var(--ink); color: var(--paper); }
+#ov-motto { margin-top: 30px; min-height: 1.4em; font-size: 12px; letter-spacing: .4em; color: var(--mode); transition: color 1s; }
+.ov-inner .tip { margin-top: 18px; font-size: 11px; letter-spacing: .4em; opacity: .42; }
 
 @media (max-width: 720px) {
   #hint { display: none; }
   #title { top: 22px; right: 22px; }
+  #seasons { top: 22px; right: 72px; }
   #section { right: 24px; top: 128px; }
+  #picks { gap: 14px; }
+  #picks button { width: 54px; height: 54px; }
   #bar { left: 6vw; right: 6vw; font-size: 12px; }
   #mode-desc { right: 6vw; }
   #toggles button, #modes button { padding: 6px 6px; }

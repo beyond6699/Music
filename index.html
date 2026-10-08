@@ -3,16 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>春 · 五声</title>
+  <title>四时 · 五声</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body data-season="spring">
   <canvas id="stage"></canvas>
 
   <header id="title">
     <div class="title-char">春</div>
     <div class="seal"><span>五</span><span>声</span></div>
   </header>
+
+  <nav id="seasons" aria-label="季节"></nav>
 
   <aside id="section">
     <div class="sec-name"><span class="sec-idx">起</span><span class="sec-term">雨水</span></div>
@@ -22,17 +24,18 @@
   <div id="hint">
     <p><b>点弦</b>拨奏</p>
     <p><b>划弦</b>刮奏</p>
-    <p><b>移日</b>晨昏 · 疾徐</p>
-    <p><b>拂空</b>起风 · 落花</p>
+    <p><b id="hint-light">移日</b>晨昏 · 疾徐</p>
+    <p><b>拂空</b>起风</p>
   </div>
 
   <div id="mode-desc"></div>
 
   <footer id="bar">
-    <div id="time"><span id="time-now">0:00</span><i>/</i><span>3:00</span></div>
+    <div id="time"><span id="time-now">0:00</span><i>/</i><span id="time-total">3:00</span></div>
     <div id="toggles">
-      <button id="btn-rain" title="雨 [R]">雨<span class="lv"><i></i><i></i></span></button>
-      <button id="btn-bird" title="鸟 [B]">鸟</button>
+      <button id="btn-wx" title="天气 [Z]">雨<span class="lv"><i></i><i></i></span></button>
+      <button id="btn-cr" title="生灵 [X]">鸟</button>
+      <button id="btn-cycle" title="四季轮转 [C]">轮</button>
       <button id="btn-pause" title="停 / 续 [空格]">停</button>
     </div>
     <div id="modes"></div>
@@ -40,11 +43,12 @@
 
   <div id="overlay">
     <div class="ov-inner">
-      <h1>春</h1>
+      <h1>四时</h1>
       <p class="sub">五声 · 意象</p>
-      <p class="desc">宫 · 商 · 角 · 徵 · 羽<br>以角调起 · 角属木 · 应春</p>
-      <button id="enter" aria-label="进入"><span>入</span></button>
-      <p class="tip">宜戴耳机 · 约三分钟 · 循环</p>
+      <p class="desc">宫 · 商 · 角 · 徵 · 羽<br>春角 · 夏徵 · 秋商 · 冬羽</p>
+      <div id="picks"></div>
+      <p id="ov-motto"></p>
+      <p class="tip">择一季而入 · 宜戴耳机 · 每季约三分钟</p>
     </div>
   </div>
 

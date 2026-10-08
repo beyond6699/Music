@@ -4,6 +4,7 @@
   const C = window.Chun;
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const $ = (s) => document.querySelector(s);
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
   const E = new C.Engine();
   const V = new C.Visual($('#stage'), E);
@@ -24,27 +25,90 @@
     const changed = i !== E.mode;
     E.setMode(i);
     V.applyMode(i);
-    const m = C.MODES[i];
-    modeBtns.forEach((b, k) => b.classList.toggle('on', k === i));
+    syncMode();
+    if (changed && E.ready) {
+      E.precache(E.season.str);
+      E.gliss(E.now + 0.03, 0.75, true, 0.3);
+    }
+  }
+
+  function syncMode() {
+    const m = C.MODES[E.mode];
+    modeBtns.forEach((b, k) => b.classList.toggle('on', k === E.mode));
     document.documentElement.style.setProperty('--mode', m.color);
     $('#mode-desc').textContent = `${m.name}调 · ${m.el} · ${m.dir} · ${m.mood}`;
-    if (changed && E.ready) E.gliss(E.now + 0.03, 0.75, true, 0.3);
   }
-  setMode(2);
 
-  // 段落
-  let curSec = -1;
-  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  // 季节
+  const KEYS_SEASON = ['q', 'w', 'e', 'r'];
+  const seasonBtns = C.SEASONS.map((S, i) => {
+    const b = document.createElement('button');
+    b.textContent = S.name;
+    b.title = `${S.name} [${KEYS_SEASON[i].toUpperCase()}]`;
+    b.addEventListener('click', () => chooseSeason(i));
+    $('#seasons').appendChild(b);
+    return b;
+  });
+
+  let previewIdx = 0;
+  const pickBtns = C.SEASONS.map((S, i) => {
+    const b = document.createElement('button');
+    b.innerHTML = `<span>${S.name}</span>`;
+    b.setAttribute('aria-label', `进入${S.name}`);
+    b.addEventListener('mouseenter', () => previewSeason(i));
+    b.addEventListener('focus', () => previewSeason(i));
+    b.addEventListener('click', () => enter(i));
+    $('#picks').appendChild(b);
+    return b;
+  });
+
+  function chooseSeason(i) {
+    if (!E.ready) { previewSeason(i); return; }
+    K.setSeason(C.SEASONS[i]);
+  }
+
+  function previewSeason(i) {
+    if (E.ready) return;
+    previewIdx = i;
+    const S = C.SEASONS[i];
+    E.setSeason(S);
+    V.preview(S);
+    syncAll(S);
+  }
+
+  function syncAll(S) {
+    S = S || E.season;
+    seasonBtns.forEach((b, k) => b.classList.toggle('on', k === S.index));
+    pickBtns.forEach((b, k) => b.classList.toggle('on', k === S.index));
+    $('.title-char').textContent = S.name;
+    document.title = `${S.name} · 五声`;
+    document.body.dataset.season = S.id;
+    $('#time-total').textContent = fmt(S.nominal);
+    $('#hint-light').textContent = S.body === '月' ? '移月' : '移日';
+    $('#ov-motto').textContent = `${S.name} · ${C.MODES[S.mode].name}调 · ${S.motto}`;
+    syncMode();
+    syncToggles();
+    if (!E.ready || curSid !== S.id) showSection(S, 0);
+  }
+
+  E.on((e) => { if (e.type === 'season') syncAll(e.S); });
+
+  // 段落与诗句
+  let curSec = -1, curSid = null, secTimer = 0;
   V.onStep = (e) => {
-    $('#time-now').textContent = fmt((e.step / e.total) * C.NOMINAL_SECONDS);
-    if (e.sec !== curSec) showSection(e.sec);
+    const S = C.seasonById(e.sid);
+    $('#time-now').textContent = fmt((e.step / e.total) * S.nominal);
+    if (e.sec !== curSec || e.sid !== curSid) showSection(S, e.sec);
   };
-  function showSection(i) {
+  function showSection(S, i) {
+    if (curSec === i && curSid === S.id) return;
     curSec = i;
-    const s = C.SECTIONS[i];
+    curSid = S.id;
+    const s = S.sections[i];
     const el = $('#section');
     el.classList.add('fade');
-    setTimeout(() => {
+    clearTimeout(secTimer);
+    secTimer = setTimeout(() => {
       $('.sec-idx').textContent = s.name;
       $('.sec-term').textContent = s.term;
       $('.sec-poem').innerHTML = s.poem.map((p) => `<p>${p}</p>`).join('') + `<cite>${s.author}</cite>`;
@@ -66,34 +130,42 @@
   }
 
   // 开始
-  function enter() {
+  function enter(i) {
     if (E.ready) return;
+    const S = C.SEASONS[i];
+    E.setSeason(S);
     E.init();
     E.ctx.resume();
-    K.start();
+    K.start(S);
     $('#overlay').classList.add('hidden');
     document.body.classList.add('playing');
   }
-  $('#enter').addEventListener('click', enter);
 
   // 控件
-  const rainBtn = $('#btn-rain'), birdBtn = $('#btn-bird'), pauseBtn = $('#btn-pause');
+  const wxBtn = $('#btn-wx'), crBtn = $('#btn-cr'), cyBtn = $('#btn-cycle'), pauseBtn = $('#btn-pause');
   function syncToggles() {
-    rainBtn.dataset.level = E.rain;
-    rainBtn.classList.toggle('on', E.rain > 0);
-    birdBtn.classList.toggle('on', E.birds);
+    const S = E.season;
+    wxBtn.firstChild.textContent = S.weather.name;
+    crBtn.textContent = S.creature.name;
+    wxBtn.dataset.level = E.weather;
+    wxBtn.classList.toggle('on', E.weather > 0);
+    crBtn.classList.toggle('on', E.creature);
+    cyBtn.classList.toggle('on', K.cycle);
   }
-  function cycleRain() { E.rain = (E.rain + 1) % 3; syncToggles(); }
-  function toggleBird() { E.birds = !E.birds; syncToggles(); }
+  function cycleWeather() { E.weather = (E.weather + 1) % 3; syncToggles(); }
+  function toggleCreature() { E.creature = !E.creature; syncToggles(); }
+  function toggleCycle() { K.cycle = !K.cycle; syncToggles(); }
   function togglePause() {
     if (!E.ready) return;
     if (E.ctx.state === 'running') { E.ctx.suspend(); pauseBtn.textContent = '续'; pauseBtn.classList.add('on'); }
     else { E.ctx.resume(); pauseBtn.textContent = '停'; pauseBtn.classList.remove('on'); }
   }
-  rainBtn.addEventListener('click', cycleRain);
-  birdBtn.addEventListener('click', toggleBird);
+  wxBtn.addEventListener('click', cycleWeather);
+  crBtn.addEventListener('click', toggleCreature);
+  cyBtn.addEventListener('click', toggleCycle);
   pauseBtn.addEventListener('click', togglePause);
-  syncToggles();
+
+  syncAll(C.SEASONS[0]);
 
   // 指针：拨弦 / 划弦 / 移日 / 拂空 / 跳转
   const cv = V.cv;
@@ -103,7 +175,7 @@
     const x = ev.clientX, y = ev.clientY;
     cv.setPointerCapture(ev.pointerId);
     if (V.hitSun(x, y)) { drag = { type: 'sun', off: y - V.sunY }; cv.style.cursor = 'grabbing'; return; }
-    if (V.hitProgress(x, y)) { K.seek(Math.floor((V.progressAt(x) * C.TOTAL_STEPS) / 8) * 8); return; }
+    if (V.hitProgress(x, y)) { K.seek(Math.floor((V.progressAt(x) * E.season.total) / 8) * 8); return; }
     const si = V.hitString(x, y);
     if (si >= 0) { pluck(si, x, 0.85); drag = { type: 'strum', x, y, t: performance.now() }; return; }
     drag = { type: 'wind', x, y, t: performance.now() };
@@ -138,19 +210,27 @@
   // 键盘
   const KEYS = 'asdfg';
   window.addEventListener('keydown', (ev) => {
-    if (ev.repeat) return;
+    if (ev.repeat || ev.metaKey || ev.ctrlKey || ev.altKey) return;
     const k = ev.key.toLowerCase();
-    if (!E.ready) { if (k === 'enter' || k === ' ') { ev.preventDefault(); enter(); } return; }
+    const si = KEYS_SEASON.indexOf(k);
+    if (!E.ready) {
+      if (k === 'enter' || k === ' ') { ev.preventDefault(); enter(previewIdx); }
+      else if (si >= 0) previewSeason(si);
+      else if (k === 'arrowright' || k === 'arrowleft') previewSeason((previewIdx + (k === 'arrowright' ? 1 : 3)) % 4);
+      return;
+    }
     const i = KEYS.indexOf(k);
     if (i >= 0 && k.length === 1) {
       const z = ev.shiftKey ? 3 : 2;
       pluck(i, V.sx0 + ((z + 0.5) / 5) * (V.sx1 - V.sx0), 0.8);
       return;
     }
-    if (k >= '1' && k <= '5') setMode(+k - 1);
+    if (si >= 0) chooseSeason(si);
+    else if (k >= '1' && k <= '5') setMode(+k - 1);
     else if (k === ' ') { ev.preventDefault(); togglePause(); }
-    else if (k === 'r') cycleRain();
-    else if (k === 'b') toggleBird();
+    else if (k === 'z') cycleWeather();
+    else if (k === 'x') toggleCreature();
+    else if (k === 'c') toggleCycle();
     else if (k === 'arrowup') E.setLight(E.light + 0.08);
     else if (k === 'arrowdown') E.setLight(E.light - 0.08);
   });
